@@ -1,0 +1,11 @@
+=====================================
+#### composition for supergraph graphql
+APOLLO_ELV2_LICENSE=accept rover supergraph compose --config ./supergraph-config.yaml > supergraph.graphql
+
+
+#### run router
+./router --dev --supergraph supergraph.graphql
+
+
+
+

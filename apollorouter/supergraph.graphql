@@ -1,0 +1,92 @@
+schema
+  @link(url: "https://specs.apollo.dev/link/v1.0")
+  @link(url: "https://specs.apollo.dev/join/v0.2", for: EXECUTION)
+{
+  query: Query
+  mutation: Mutation
+}
+
+directive @join__field(graph: join__Graph!, requires: join__FieldSet, provides: join__FieldSet, type: String, external: Boolean, override: String, usedOverridden: Boolean) repeatable on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+
+directive @join__graph(name: String!, url: String!) on ENUM_VALUE
+
+directive @join__implements(graph: join__Graph!, interface: String!) repeatable on OBJECT | INTERFACE
+
+directive @join__type(graph: join__Graph!, key: join__FieldSet, extension: Boolean! = false, resolvable: Boolean! = true) repeatable on OBJECT | INTERFACE | UNION | ENUM | INPUT_OBJECT | SCALAR
+
+directive @link(url: String, as: String, for: link__Purpose, import: [link__Import]) repeatable on SCHEMA
+
+scalar join__FieldSet
+
+enum join__Graph {
+  APPLICATIONS @join__graph(name: "applications", url: "https://reviews.demo.starstuff.dev")
+  AUTH @join__graph(name: "auth", url: "https://accounts.demo.starstuff.dev")
+  STUDENTS @join__graph(name: "students", url: "https://products.demo.starstuff.dev")
+  USERS @join__graph(name: "users", url: "https://inventory.demo.starstuff.dev")
+}
+
+scalar link__Import
+
+enum link__Purpose {
+  """
+  `SECURITY` features provide metadata necessary to securely resolve fields.
+  """
+  SECURITY
+
+  """
+  `EXECUTION` features provide metadata necessary for operation execution.
+  """
+  EXECUTION
+}
+
+type Mutation
+  @join__type(graph: APPLICATIONS)
+  @join__type(graph: STUDENTS)
+{
+  createReview(upc: ID!, id: ID!, body: String): Review @join__field(graph: APPLICATIONS)
+  createProduct(upc: ID!, name: String): Product @join__field(graph: STUDENTS)
+}
+
+type Product
+  @join__type(graph: APPLICATIONS, key: "upc")
+  @join__type(graph: STUDENTS, key: "upc")
+  @join__type(graph: USERS, key: "upc")
+{
+  upc: String!
+  reviews: [Review] @join__field(graph: APPLICATIONS)
+  reviewsForAuthor(authorID: ID!): [Review] @join__field(graph: APPLICATIONS)
+  name: String @join__field(graph: STUDENTS)
+  price: Int @join__field(graph: STUDENTS) @join__field(graph: USERS, external: true)
+  weight: Int @join__field(graph: STUDENTS) @join__field(graph: USERS, external: true)
+  inStock: Boolean @join__field(graph: USERS)
+  shippingEstimate: Int @join__field(graph: USERS, requires: "price weight")
+}
+
+type Query
+  @join__type(graph: APPLICATIONS)
+  @join__type(graph: AUTH)
+  @join__type(graph: STUDENTS)
+  @join__type(graph: USERS)
+{
+  me: User @join__field(graph: AUTH)
+  topProducts(first: Int = 5): [Product] @join__field(graph: STUDENTS)
+}
+
+type Review
+  @join__type(graph: APPLICATIONS, key: "id")
+{
+  id: ID!
+  body: String
+  author: User @join__field(graph: APPLICATIONS, provides: "username")
+  product: Product
+}
+
+type User
+  @join__type(graph: APPLICATIONS, key: "id")
+  @join__type(graph: AUTH, key: "id")
+{
+  id: ID!
+  username: String @join__field(graph: APPLICATIONS, external: true) @join__field(graph: AUTH)
+  reviews: [Review] @join__field(graph: APPLICATIONS)
+  name: String @join__field(graph: AUTH)
+}
